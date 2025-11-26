@@ -3,9 +3,10 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 
 import { connectDB } from "./lib/db.js";
-import { startTorSim } from "./lib/torsim.js";
+import { startTorSim, stopTorSim } from "./lib/torsim.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -48,14 +49,30 @@ server.listen(PORT, () => {
   console.log("Server is running on PORT:" + PORT);
   connectDB();
   startTorSim(); // Start the Python TOR simulation process
-  
-  // Tor Implementation Demo - Educational Logging Only (Does not affect chat functionality)
-  console.log("\n🧅 Tor Network Demo - Educational Simulation");
-  console.log("📚 (This is isolated demo code and doesn't affect the chat app)");
-  setTimeout(() => console.log("🔗 Node 1 created (Entry Node)"), 1000);
-  setTimeout(() => console.log("🔗 Node 2 created (Middle Node)"), 1500);
-  setTimeout(() => console.log("🔗 Node 3 created (Exit Node)"), 2000);
-  setTimeout(() => console.log("🔗 Node 4 created (Middle Node)"), 2500);
-  setTimeout(() => console.log("🔗 Node 5 created (Entry Node)"), 3000);
-  setTimeout(() => console.log("✅ Tor Demo Network Ready (Educational only)\n"), 3500);
+
+  // Tor Implementation Demo - Real Node Logging (using fs instead of import)
+  const configPath = path.resolve("./tor_sim/tor_nodes_config.json");
+  try {
+    const configRaw = fs.readFileSync(configPath, "utf-8");
+    const config = JSON.parse(configRaw);
+    const nodes = config.nodes;
+    nodes.forEach((node, idx) => {
+      setTimeout(() => {
+        console.log(`🔗 Node ${node.id} created (${node.type.charAt(0).toUpperCase() + node.type.slice(1)} Node) on port ${node.port}`);
+      }, 1000 + idx * 500);
+    });
+    setTimeout(() => console.log("✅ Tor Demo Network Ready (Educational only)\n"), 1000 + nodes.length * 500);
+  } catch (err) {
+    console.error("Error loading Tor nodes config:", err);
+  }
+});
+
+// Gracefully stop the Python TOR simulation process on exit
+process.on("SIGINT", () => {
+  stopTorSim();
+  process.exit();
+});
+process.on("SIGTERM", () => {
+  stopTorSim();
+  process.exit();
 });
