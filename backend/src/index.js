@@ -5,9 +5,11 @@ import cors from "cors";
 import path from "path";
 
 import { connectDB } from "./lib/db.js";
+import { startTorSim } from "./lib/torsim.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import tornodesRoute from "./routes/tornodes.route.js";
 import { app, server } from "./lib/socket.js";
 
 dotenv.config();
@@ -30,6 +32,7 @@ app.use(
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/tornodes", tornodesRoute);
 
 // Serve static files in production
 if (process.env.NODE_ENV === "production") {
@@ -44,6 +47,7 @@ if (process.env.NODE_ENV === "production") {
 server.listen(PORT, () => {
   console.log("Server is running on PORT:" + PORT);
   connectDB();
+  startTorSim(); // Start the Python TOR simulation process
   
   // Tor Implementation Demo - Educational Logging Only (Does not affect chat functionality)
   console.log("\n🧅 Tor Network Demo - Educational Simulation");
