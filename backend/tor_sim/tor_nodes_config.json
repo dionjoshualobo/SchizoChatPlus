@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    {"id": 1, "type": "entry", "port": 9001},
+    {"id": 2, "type": "entry", "port": 9002},
+    {"id": 3, "type": "middle", "port": 9003},
+    {"id": 4, "type": "middle", "port": 9004},
+    {"id": 5, "type": "middle", "port": 9005},
+    {"id": 6, "type": "exit", "port": 9006},
+    {"id": 7, "type": "exit", "port": 9007},
+    {"id": 8, "type": "guard", "port": 9008},
+    {"id": 9, "type": "bridge", "port": 9009}
+  ]
+}
