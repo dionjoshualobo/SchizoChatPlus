@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import axios from "axios";
 
 // Utility function to create a Tor packet
 export function createTorPacket(message, source, destination, layer) {
@@ -92,4 +93,26 @@ export function decryptLayer(encryptedData, key) {
 // Generate a random encryption key
 export function generateEncryptionKey() {
   return crypto.randomBytes(32);
+}
+
+// Function to route a Tor packet through the Python Tor network
+export async function routeTorPacketThroughPython(packet) {
+  try {
+    // Send the packet to the entry node
+    const entryNodeResponse = await axios.post("http://localhost:9001/processPacket", packet);
+    const entryNodePacket = entryNodeResponse.data;
+
+    // Send the packet to the middle node
+    const middleNodeResponse = await axios.post("http://localhost:9003/processPacket", entryNodePacket);
+    const middleNodePacket = middleNodeResponse.data;
+
+    // Send the packet to the exit node
+    const exitNodeResponse = await axios.post("http://localhost:9006/processPacket", middleNodePacket);
+    const exitNodePacket = exitNodeResponse.data;
+
+    return exitNodePacket; // Final decrypted packet
+  } catch (error) {
+    console.error("Error routing packet through Python Tor network:", error.message);
+    throw new Error("Failed to route packet through Tor network.");
+  }
 }
