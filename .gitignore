@@ -38,7 +38,8 @@ Thumbs.db
 node_modules/
 
 # Build directories
-public/
+# (do not ignore public directory for frontend)
+
 
 #Virtual environment
 .venv/
