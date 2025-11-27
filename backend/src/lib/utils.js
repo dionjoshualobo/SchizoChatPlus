@@ -45,3 +45,29 @@ export const generateToken = (userId, res) => {
 
   return token;
 };
+
+// Simulate routing a Tor packet through the network
+export async function routeTorPacket(packet, nodes) {
+  if (!validateTorPacket(packet)) {
+    throw new Error("Invalid Tor packet structure.");
+  }
+
+  console.log("Routing packet through Tor network...");
+
+  for (const node of nodes) {
+    console.log(`Routing through node: ${node.id} (${node.type})`);
+
+    // Simulate encryption/decryption at each node
+    packet.payload = encryptDecryptLayer(packet.payload, node.key);
+    packet.layer = node.type;
+  }
+
+  console.log("Packet successfully routed through Tor network.");
+  return packet;
+}
+
+// Simulate encryption/decryption for a layer
+function encryptDecryptLayer(payload, key) {
+  // Placeholder for actual encryption/decryption logic
+  return `${payload} (processed with key: ${key})`;
+}
