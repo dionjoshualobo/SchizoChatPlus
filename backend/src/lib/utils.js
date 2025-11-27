@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 
 // Utility function to create a Tor packet
-function createTorPacket(message, source, destination, layer) {
+export function createTorPacket(message, source, destination, layer) {
   return {
     id: generateUniqueId(), // Generate a unique ID for the packet
     source,
@@ -13,7 +13,7 @@ function createTorPacket(message, source, destination, layer) {
 }
 
 // Utility function to validate a Tor packet
-function validateTorPacket(packet) {
+export function validateTorPacket(packet) {
   const requiredFields = [
     "id",
     "source",
@@ -30,6 +30,7 @@ function generateUniqueId() {
   return Math.random().toString(36).substr(2, 9);
 }
 
+// Export the generateToken function
 export const generateToken = (userId, res) => {
   const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: "7d",
@@ -43,9 +44,4 @@ export const generateToken = (userId, res) => {
   });
 
   return token;
-};
-
-module.exports = {
-  createTorPacket,
-  validateTorPacket,
 };
