@@ -3,6 +3,14 @@ import Message from "../models/message.model.js";
 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import { createTorPacket, routeTorPacket, encryptLayer, decryptLayer, generateEncryptionKey } from "../lib/utils.js";
+
+// Mock Tor nodes with encryption keys
+const torNodes = [
+  { id: "Node1", type: "entry", key: generateEncryptionKey() },
+  { id: "Node2", type: "middle", key: generateEncryptionKey() },
+  { id: "Node3", type: "exit", key: generateEncryptionKey() },
+];
 
 export const getUsersForSidebar = async (req, res) => {
   try {
@@ -37,34 +45,35 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
-    const { id: receiverId } = req.params;
-    const senderId = req.user._id;
+    const { senderId, receiverId, text } = req.body;
 
-    let imageUrl;
-    if (image) {
-      // Upload base64 image to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
+    // Step 1: Create a Tor packet
+    const torPacket = createTorPacket({ text }, senderId, receiverId, "entry");
+
+    // Step 2: Route the packet through the Tor network
+    let routedPacket = torPacket;
+    for (const node of torNodes) {
+      if (node.type !== "exit") {
+        routedPacket.payload = encryptLayer(routedPacket.payload, node.key);
+      } else {
+        routedPacket.payload = decryptLayer(routedPacket.payload, node.key);
+      }
+      routedPacket.layer = node.type;
     }
 
-    const newMessage = new Message({
+    // Step 3: Emit the message to the recipient
+    const message = {
       senderId,
       receiverId,
-      text,
-      image: imageUrl,
-    });
+      text: routedPacket.payload.text, // Decrypted payload
+    };
+    req.io.emit("newMessage", message);
 
-    await newMessage.save();
+    // Step 4: Store the message in MongoDB
+    await Message.create(message);
 
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
-    }
-
-    res.status(201).json(newMessage);
+    res.status(200).json({ success: true, message });
   } catch (error) {
-    console.log("Error in sendMessage controller: ", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
