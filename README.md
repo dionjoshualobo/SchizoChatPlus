@@ -13,8 +13,6 @@ This project now includes a simulated Tor network for educational purposes:
   - `GET /tornodes` (on backend, e.g. `http://localhost:5001/tornodes`) returns the current simulated nodes as JSON.
 - **Visualization:**
   - `GET /tornodes/visualization` (on backend, e.g. `http://localhost:5001/tornodes/visualization`) displays a live SVG diagram of the Tor network nodes and their connections.
-- **Frontend Visualization:**
-  - (Optional) The React component `TorNetworkVisualization.jsx` can be used in the frontend for a modern, interactive view.
 - **No Impact on Chat:**
   - The Tor simulation is isolated and does not affect chat functionality.
 - **Graceful Shutdown:**
