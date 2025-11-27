@@ -24,9 +24,16 @@ class NodeAPIHandler(BaseHTTPRequestHandler):
 
 def run():
     server_address = ('', PORT)
+    HTTPServer.allow_reuse_address = True  # Allow immediate port reuse
     httpd = HTTPServer(server_address, NodeAPIHandler)
     print(f"[tor_sim] Node API running at http://localhost:{PORT}/nodes")
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n[tor_sim] Shutting down server (Ctrl+C detected)...")
+    finally:
+        httpd.server_close()
+        print("[tor_sim] Server closed cleanly.")
 
 if __name__ == "__main__":
     run()
