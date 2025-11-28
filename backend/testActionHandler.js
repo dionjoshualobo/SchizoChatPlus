@@ -1,3 +1,11 @@
+import { connectDB } from './src/lib/db.js';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Load environment variables from .env file
+
+// Ensure the database connection is established before running tests
+await connectDB();
+
 import {
   determineAction,
   executeAction
@@ -5,11 +13,13 @@ import {
 
 // Sample packet
 const testPacket = {
-  packetId: "12345",
-  senderId: "userA",
-  receiverId: "userB",
-  payload: "Hello World",
-  size: 500,
+  id: 'unique-id',
+  source: 'userA',
+  destination: 'userB',
+  layer: 'entry',
+  timestamp: new Date().toISOString(),
+  payload: 'Hello World',
+  size: Buffer.byteLength('Hello World', 'utf-8')
 };
 
 // Try different risk scores:

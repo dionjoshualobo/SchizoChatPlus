@@ -69,7 +69,8 @@ export function extractFeatures(packet) {
     size: normalize(packet.size || 0, 0, 2000),
     payloadLength: normalize(packet.payload?.length || 0, 0, 2000),
     riskScore: normalize(packet.riskScore || 0, 0, 100),
-    flagCount: normalize(packet.flags?.length || 0, 0, 10)
+    flagCount: normalize(packet.flags?.length || 0, 0, 10),
+    actionSeverity: normalize(packet.action === 'block' ? 1 : 0, 0, 1) // New feature
   };
 }
 
