@@ -24,13 +24,13 @@ router.get("/visualization", async (req, res) => {
       { id: "sender", x: 100, y: 250, label: "Sender", color: "#3A6351" },
       { id: "bridge", x: 300, y: 250, label: "Bridge", color: "#6A2C70" },
       { id: "guard", x: 500, y: 250, label: "Guard", color: "#B83B5E" },
-      { id: "entry1", x: 700, y: 150, label: "Entry Node 1", color: "#4F8A8B" },
-      { id: "entry2", x: 700, y: 350, label: "Entry Node 2", color: "#4F8A8B" },
-      { id: "middle1", x: 900, y: 100, label: "Middle Node 1", color: "#F9ED69" },
-      { id: "middle2", x: 900, y: 250, label: "Middle Node 2", color: "#F9ED69" },
-      { id: "middle3", x: 900, y: 400, label: "Middle Node 3", color: "#F9ED69" },
-      { id: "exit1", x: 1100, y: 150, label: "Exit Node 1", color: "#F08A5D" },
-      { id: "exit2", x: 1100, y: 350, label: "Exit Node 2", color: "#F08A5D" },
+      { id: "entry1", x: 700, y: 150, label: "Entry\nNode 1", color: "#4F8A8B" },
+      { id: "entry2", x: 700, y: 350, label: "Entry\nNode 2", color: "#4F8A8B" },
+      { id: "middle1", x: 900, y: 100, label: "Middle\nNode 1", color: "#F9ED69" },
+      { id: "middle2", x: 900, y: 250, label: "Middle\nNode 2", color: "#F9ED69" },
+      { id: "middle3", x: 900, y: 400, label: "Middle\nNode 3", color: "#F9ED69" },
+      { id: "exit1", x: 1100, y: 150, label: "Exit\nNode 1", color: "#F08A5D" },
+      { id: "exit2", x: 1100, y: 350, label: "Exit\nNode 2", color: "#F08A5D" },
       { id: "receiver", x: 1300, y: 250, label: "Receiver", color: "#3A6351" },
     ];
 
@@ -42,8 +42,8 @@ router.get("/visualization", async (req, res) => {
         <svg width='1400' height='600' style='background:#222;border-radius:12px;box-shadow:0 2px 8px #0004;'>
           ${positions.map((node) => `
             <g>
-              <circle cx='${node.x}' cy='${node.y}' r='30' fill='${node.color}' stroke='#222' stroke-width='2'/>
-              <text x='${node.x}' y='${node.y + 5}' text-anchor='middle' fill='#fff' font-size='14'>${node.label}</text>
+              <circle cx='${node.x}' cy='${node.y}' r='40' fill='${node.color}' stroke='#222' stroke-width='2'/>
+              <text x='${node.x}' y='${node.y + 55}' text-anchor='middle' fill='#fff' font-size='14'>${node.label}</text>
             </g>
           `).join('')}
 
@@ -70,7 +70,7 @@ router.get("/visualization", async (req, res) => {
             const fromNode = positions.find((node) => node.id === connection.from);
             const toNode = positions.find((node) => node.id === connection.to);
             return `
-              <line x1='${fromNode.x + 30}' y1='${fromNode.y}' x2='${toNode.x - 30}' y2='${toNode.y}' stroke='#888' stroke-width='2' marker-end='url(#arrow)'/>
+              <line x1='${fromNode.x + 40}' y1='${fromNode.y}' x2='${toNode.x - 40}' y2='${toNode.y}' stroke='#888' stroke-width='2' marker-end='url(#arrow)'/>
             `;
           }).join('')}
 
