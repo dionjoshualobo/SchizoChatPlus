@@ -1,6 +1,44 @@
 # SchizoChatPlus
 
-SchizoChatPlus is a cutting-edge chat application designed with a strong focus on anonymity and privacy. By leveraging a Tor-like network for message routing, it ensures that user identities and communication remain secure and untraceable. This application is ideal for individuals and organizations that prioritize confidentiality in their communications.
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white)
+
+SchizoChatPlus is a cutting-edge chat application designed with a strong focus on anonymity, privacy, and security. By leveraging a Tor-like network for message routing, it ensures that user identities and communication remain secure and untraceable. This application is ideal for individuals and organizations that prioritize confidentiality in their communications.
+
+> **Status:** SchizoChatPlus is currently not hosted anywhere publicly. Run both the backend and frontend locally to explore the project.
+
+---
+
+## How It Works
+
+SchizoChatPlus combines client-side obfuscation, layered encryption, and backend intrusion-detection logic to mimic a Tor-style onion-routing experience inside a single application stack. The flow below summarizes what happens after a user types a message:
+
+### Message Flow Overview
+
+1. **Client-side preparation** (`frontend/src`): The React client derives a temporary session key, chunks the outbound payload, and tags it with metadata used for multi-hop routing simulation.
+2. **Layered encryption** (`backend/src/lib/utils.js`): Each chunk is wrapped with AES-256 keys associated with the configured “virtual relays,” producing multiple ciphertext layers.
+3. **Virtual relay routing** (`backend/src/ids/packetInspector.js`): Packets traverse an in-app relay chain. Every hop peels a single layer, rewrites addressing information, and forwards the packet without ever seeing both the sender and the final recipient.
+4. **Rule & anomaly inspection** (`backend/src/ids/ruleEngine.js`, `backend/src/ids/anomalyDetector.js`): Before delivery, packets are scored for abuse, spam, or traffic-pattern anomalies. Suspicious messages are dropped or logged.
+5. **Delivery & persistence** (`backend/src/controllers/message.controller.js`, `backend/src/models/message.model.js`): Clean packets are delivered over Socket.IO in real time and persisted to MongoDB for history syncing.
+
+### Security Layers
+
+- **Anonymity envelope**: The relay simulation mirrors Tor’s guard/middle/exit design so no single hop has full conversation context.
+- **Forward secrecy**: Session keys rotate automatically at configurable intervals (see `backend/src/ids/idsConfig.js`).
+- **Data minimization**: Message metadata stored in MongoDB excludes routing history to reduce forensic clues.
+
+### Observability & Logging
+
+- `backend/src/ids/eventLogger.js` centralizes structured logs for relay hops, detections, and user actions.
+- Logs can be streamed to external SIEM tooling by extending `eventLogger.js`.
+
+For deeper diagrams and configuration nuances, review:
+
+- [Architecture Documentation](Documentations/ARCHITECTURE.md)
+- [Quick Reference](Documentations/QUICK_REFERENCE.md)
+- [IDS Config Walkthrough](backend/src/ids/idsConfig.js)
 
 ---
 
@@ -14,45 +52,44 @@ SchizoChatPlus is a cutting-edge chat application designed with a strong focus o
 
 ---
 
-## How It Works
+## Tech Stack
 
-1. **Message Routing**:
-   - Messages are encapsulated in Tor packets and routed through multiple nodes (entry, middle, and exit) to ensure anonymity.
-   - Each node decrypts only its layer of encryption, ensuring that no single node knows both the source and destination.
-
-2. **Encryption**:
-   - Messages are encrypted using AES-256 encryption, with each layer of the Tor network adding an additional layer of security.
-
-3. **Real-Time Updates**:
-   - The application uses Socket.IO to provide real-time updates, ensuring that messages are delivered instantly.
-
-4. **Database Integration**:
-   - MongoDB is used to store user data, chat histories, and other essential information securely.
-
----
-
-## Why Choose SchizoChatPlus?
-
-- **Privacy First**: Designed for users who value their privacy and want to communicate without fear of surveillance.
-- **Advanced Security**: Combines the power of Tor routing and end-to-end encryption for unparalleled security.
-- **User-Friendly**: A simple and intuitive interface ensures that anyone can use the app without technical expertise.
-- **Scalable**: Built with modern technologies to handle a growing user base and high message volumes.
+- **Frontend**: React, TailwindCSS, Vite
+- **Backend**: Node.js, Express, Socket.IO
+- **Database**: MongoDB
+- **Encryption**: AES-256 for layered encryption
+- **Deployment**: Not publicly hosted; run locally via the dev servers in this repo
 
 ---
 
 ## Table of Contents
 
-- [Requirements](#requirements)
-- [Installation](#installation)
-  - [Clone the Repository](#clone-the-repository)
-  - [Set Up Virtual Environment (venv)](#set-up-virtual-environment-venv)
-  - [Install Dependencies](#install-dependencies)
-- [Running the Application](#running-the-application)
-- [Environment Variables](#environment-variables)
-- [Node.js Version](#nodejs-version)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+- [SchizoChatPlus](#schizochatplus)
+  - [How It Works](#how-it-works)
+    - [Message Flow Overview](#message-flow-overview)
+    - [Security Layers](#security-layers)
+    - [Observability \& Logging](#observability--logging)
+  - [Key Features](#key-features)
+  - [Tech Stack](#tech-stack)
+  - [Table of Contents](#table-of-contents)
+  - [Requirements](#requirements)
+  - [MongoDB Setup](#mongodb-setup)
+  - [Installation](#installation)
+    - [Clone the Repository](#clone-the-repository)
+    - [Set Up Virtual Environment (venv)](#set-up-virtual-environment-venv)
+      - [macOS / Linux](#macos--linux)
+      - [Windows (CMD / PowerShell)](#windows-cmd--powershell)
+    - [Install Dependencies](#install-dependencies)
+      - [Backend](#backend)
+      - [Frontend](#frontend)
+  - [Running the Application](#running-the-application)
+    - [Backend](#backend-1)
+    - [Frontend](#frontend-1)
+  - [Environment Variables](#environment-variables)
+  - [Node.js Version](#nodejs-version)
+  - [Troubleshooting](#troubleshooting)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ---
 
@@ -63,6 +100,28 @@ SchizoChatPlus is a cutting-edge chat application designed with a strong focus o
 - npm (comes with Node.js)
 - Git
 - Optional: System-level build tools for compiled dependencies (e.g., `build-essential` on Linux)
+
+---
+
+## MongoDB Setup
+
+MongoDB is required as the database for this project. It is used to store user data, messages, and other application-related information. To set up MongoDB:
+
+1. **Install MongoDB**:
+   - Follow the official MongoDB installation guide for your operating system: https://www.mongodb.com/docs/manual/installation/
+
+2. **Start the MongoDB Service**:
+   - Ensure the MongoDB service is running locally on your machine. By default, it listens on `mongodb://localhost:27017`.
+
+3. **Configure the Connection**:
+   - Update the `MONGO_URI` in the `.env` file located in the `backend` directory to point to your MongoDB instance. For example:
+
+     ```env
+     MONGO_URI=mongodb://localhost:27017/schizochatplus
+     ```
+
+4. **Create the Database**:
+   - MongoDB will automatically create the database when the application starts and data is inserted.
 
 ---
 
@@ -215,31 +274,8 @@ nvm use 24
 
 ---
 
-## Project Scope
+## License
 
-This project is designed to run completely locally. It is not hosted online or accessible over the internet. All components, including the backend, frontend, and database, are intended to be set up and executed on your local machine.
-
----
-
-## MongoDB Setup
-
-MongoDB is required as the database for this project. It is used to store user data, messages, and other application-related information. To set up MongoDB:
-
-1. **Install MongoDB**:
-   - Follow the official MongoDB installation guide for your operating system: https://www.mongodb.com/docs/manual/installation/
-
-2. **Start the MongoDB Service**:
-   - Ensure the MongoDB service is running locally on your machine. By default, it listens on `mongodb://localhost:27017`.
-
-3. **Configure the Connection**:
-   - Update the `MONGO_URI` in the `.env` file located in the `backend` directory to point to your MongoDB instance. For example:
-
-     ```env
-     MONGO_URI=mongodb://localhost:27017/schizochatplus
-     ```
-
-4. **Create the Database**:
-   - MongoDB will automatically create the database when the application starts and data is inserted.
+This project is licensed under the MIT License. See the LICENSE file for details.
 
 ---
-
