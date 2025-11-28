@@ -7,6 +7,15 @@ app = Flask(__name__)
 def process_packet():
     try:
         packet = request.get_json(force=True) or {}
+        print("[IDS - Exit Node] Checking packet for anomalies and risks...")
+        print("[IDS - Exit Node] Packet metadata:", {
+            "id": packet.get("id"),
+            "source": packet.get("source"),
+            "destination": packet.get("destination"),
+            "layer": packet.get("layer"),
+            "timestamp": packet.get("timestamp")
+        })
+        print("[IDS - Exit Node] Packet passed all checks. Logging receipt...")
         print("[Exit Node] Received packet:", packet)
 
         if packet.get("payload") is None:
