@@ -15,6 +15,11 @@ def process_packet():
         packet.setdefault("hops", []).append("middle")
         packet["layer"] = "exit"
 
+        # Forward riskScore, flags, and action
+        packet["riskScore"] = packet.get("riskScore", 0)
+        packet["flags"] = packet.get("flags", [])
+        packet["action"] = packet.get("action", "allow")
+
         return jsonify(packet)
 
     except Exception as error:

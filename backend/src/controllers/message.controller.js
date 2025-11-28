@@ -58,11 +58,33 @@ export const sendMessage = async (req, res) => {
     console.log("Tor packet before routing:", torPacket);
 
     // Step 2: Route the packet through the Python-based Tor network
-    const routedPacket = await routeTorPacketThroughPython(torPacket);
-    console.log("Routed packet:", routedPacket);
+    let routedPacket;
+    try {
+      routedPacket = await routeTorPacketThroughPython(torPacket);
+      console.log("Routed packet:", routedPacket);
+      if (!routedPacket || !routedPacket.payload) {
+        throw new Error("Invalid routed packet or missing payload");
+      }
+    } catch (routingError) {
+      console.error("Error during packet routing:", routingError.message);
+      return res.status(500).json({ success: false, error: "Packet routing failed" });
+    }
 
     // Step 3: Store the message in MongoDB with timestamps
-    const parsedPayload = JSON.parse(routedPacket.payload); // Parse the payload JSON string
+    let parsedPayload;
+    try {
+      console.log("Routed packet payload:", routedPacket.payload);
+      if (typeof routedPacket.payload === "string") {
+        parsedPayload = JSON.parse(routedPacket.payload); // Parse the payload JSON string if it's a string
+      } else if (typeof routedPacket.payload === "object") {
+        parsedPayload = routedPacket.payload; // Use the object directly if it's already parsed
+      } else {
+        throw new Error("Invalid payload type");
+      }
+    } catch (parseError) {
+      console.error("Failed to parse routed packet payload:", parseError.message);
+      return res.status(500).json({ success: false, error: "Invalid packet payload format" });
+    }
 
     const messagePayload = {
       senderId,
@@ -74,17 +96,24 @@ export const sendMessage = async (req, res) => {
       messagePayload.image = image;
     }
 
-    const createdMessage = await Message.create(messagePayload);
-    const responseMessage = createdMessage.toObject();
-    responseMessage.text = parsedPayload.text; // Ensure text is included in the emitted message
+    console.log("Message payload to save:", messagePayload);
 
-    // Step 4: Emit the message (with timestamps) to relevant clients
-    console.log("Emitting responseMessage:", responseMessage);
-    req.io.emit("newMessage", responseMessage);
+    try {
+      const createdMessage = await Message.create(messagePayload);
+      const responseMessage = createdMessage.toObject();
+      responseMessage.text = parsedPayload.text; // Ensure text is included in the emitted message
 
-    res.status(200).json({ success: true, message: responseMessage });
+      // Step 4: Emit the message (with timestamps) to relevant clients
+      console.log("Emitting responseMessage:", responseMessage);
+      req.io.emit("newMessage", responseMessage);
+
+      res.status(200).json({ success: true, message: responseMessage });
+    } catch (dbError) {
+      console.error("Error saving message to database:", dbError.message);
+      res.status(500).json({ success: false, error: "Failed to save message" });
+    }
   } catch (error) {
-    console.error("Error in sendMessage controller:", error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Unexpected error in sendMessage controller:", error.message);
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 };

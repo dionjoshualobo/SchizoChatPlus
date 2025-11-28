@@ -3,21 +3,22 @@ import crypto from "crypto";
 import axios from "axios";
 import fetch from "node-fetch";
 
-// Utility function to create a Tor packet
+// Updated packet structure to include IDS metadata fields
 export function createTorPacket(message, source, destination, layer) {
-  const payload = JSON.stringify(message);
   return {
-    id: generateUniqueId(), // Generate a unique ID for the packet
+    id: generateUniqueId(),
     source,
     destination,
     layer,
     timestamp: new Date().toISOString(),
-    payload, // Embed the existing message JSON as the payload
-    size: Buffer.byteLength(payload, "utf-8"), // Calculate the size of the payload in bytes
+    payload: message,
+    riskScore: 0, // Default risk score
+    flags: [], // Default empty flags array
+    action: "allow", // Default action
   };
 }
 
-// Utility function to validate a Tor packet
+// Updated validation to include new fields
 export function validateTorPacket(packet) {
   const requiredFields = [
     "id",
@@ -26,6 +27,9 @@ export function validateTorPacket(packet) {
     "layer",
     "timestamp",
     "payload",
+    "riskScore",
+    "flags",
+    "action",
   ];
   return requiredFields.every((field) => field in packet);
 }

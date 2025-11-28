@@ -78,6 +78,14 @@ export const rules = [
     riskScore: 45,
     action: 'flag',
     description: 'Payload contains non-UTF8 or unusual characters'
+  },
+  {
+    id: 'R009',
+    name: 'Null Byte Detected',
+    check: (packet) => packet.payload.includes('\0'),
+    riskScore: 65,
+    action: 'block',
+    description: 'Payload contains null byte(s)'
   }
 ];
 

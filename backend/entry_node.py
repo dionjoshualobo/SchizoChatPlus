@@ -14,6 +14,9 @@ def process_packet():
 
         packet.setdefault("hops", []).append("entry")
         packet["layer"] = "middle"
+        packet["riskScore"] = 0  # Initialize risk score
+        packet["flags"] = []  # Initialize flags
+        packet["action"] = "allow"  # Default action
 
         return jsonify(packet)
 
