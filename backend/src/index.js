@@ -4,9 +4,11 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
+import { spawn } from "child_process";
 
 import { connectDB } from "./lib/db.js";
 import { startTorSim, stopTorSim } from "./lib/torsim.js";
+import { io } from "./lib/socket.js";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -17,6 +19,7 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 const __dirname = path.resolve();
+const pythonNodeProcesses = [];
 
 // Increase payload size limit
 app.use(express.json({ limit: "10mb" })); // Allow payloads up to 10 MB
@@ -29,6 +32,12 @@ app.use(
     credentials: true,
   })
 );
+
+// Attach Socket.IO instance to req
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -50,6 +59,11 @@ server.listen(PORT, () => {
   connectDB();
   startTorSim(); // Start the Python TOR simulation process
 
+  // Start the TOR node servers when the backend starts
+  startPythonNode("./entry_node.py", "Entry node server");
+  startPythonNode("./middle_node.py", "Middle node server");
+  startPythonNode("./exit_node.py", "Exit node server");
+
   // Tor Implementation Demo - Real Node Logging (using fs instead of import)
   const configPath = path.resolve("./tor_sim/tor_nodes_config.json");
   try {
@@ -67,12 +81,51 @@ server.listen(PORT, () => {
   }
 });
 
+// Function to start a Python TOR node server
+function startPythonNode(script, label) {
+  const nodeProcess = spawn("python3", [script], {
+    cwd: process.cwd(),
+    stdio: "inherit",
+  });
+
+  nodeProcess.on("error", (error) => {
+    console.error(`Failed to start ${label}:`, error.message);
+  });
+
+  nodeProcess.on("exit", (code) => {
+    console.log(`${label} exited with code ${code}`);
+  });
+
+  pythonNodeProcesses.push({ label, process: nodeProcess });
+}
+
+// Function to stop all spawned Python node servers
+function stopPythonNodes() {
+  pythonNodeProcesses.forEach(({ label, process: nodeProcess }) => {
+    if (nodeProcess && !nodeProcess.killed) {
+      nodeProcess.kill();
+      console.log(`${label} stopped.`);
+    }
+  });
+  pythonNodeProcesses.length = 0;
+}
+
+function handleShutdown() {
+  stopTorSim();
+  stopPythonNodes();
+}
+
 // Gracefully stop the Python TOR simulation process on exit
 process.on("SIGINT", () => {
-  stopTorSim();
+  handleShutdown();
   process.exit();
 });
 process.on("SIGTERM", () => {
-  stopTorSim();
+  handleShutdown();
   process.exit();
+});
+process.on("exit", handleShutdown);
+process.once("SIGUSR2", () => {
+  handleShutdown();
+  process.kill(process.pid, "SIGUSR2");
 });

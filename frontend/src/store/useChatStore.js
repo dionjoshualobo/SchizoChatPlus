@@ -33,13 +33,36 @@ export const useChatStore = create((set, get) => ({
       set({ isMessagesLoading: false });
     }
   },
-  sendMessage: async (messageData) => {
+  sendMessage: async ({ text, image }) => {
     const { selectedUser, messages } = get();
+    const authUser = useAuthStore.getState().authUser;
+
+    if (!authUser?._id) {
+      toast.error("You must be logged in to send messages");
+      return;
+    }
+
+    if (!selectedUser?._id) {
+      toast.error("Select a conversation before sending messages");
+      return;
+    }
+
+    const payload = {
+      text,
+      image,
+      senderId: authUser._id,
+      receiverId: selectedUser._id,
+    };
+
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: [...messages, res.data] });
+      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, payload);
+      const message = res.data?.message;
+      if (message) {
+        set({ messages: [...messages, message] });
+      }
     } catch (error) {
-      toast.error(error.response.data.message);
+      const message = error.response?.data?.message || "Failed to send message";
+      toast.error(message);
     }
   },
 

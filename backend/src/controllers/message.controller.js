@@ -3,7 +3,8 @@ import Message from "../models/message.model.js";
 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
-import { createTorPacket, routeTorPacket, encryptLayer, decryptLayer, generateEncryptionKey } from "../lib/utils.js";
+
+import { createTorPacket, routeTorPacketThroughPython, encryptLayer, decryptLayer, generateEncryptionKey } from "../lib/utils.js";
 
 // Mock Tor nodes with encryption keys
 const torNodes = [
@@ -47,19 +48,18 @@ export const sendMessage = async (req, res) => {
   try {
     const { senderId, receiverId, text } = req.body;
 
+    // Debug log to inspect request body
+    console.log("Request body:", req.body);
+
     // Step 1: Create a Tor packet
     const torPacket = createTorPacket({ text }, senderId, receiverId, "entry");
+    torPacket.source = senderId; // Set the source to the sender ID
+    torPacket.destination = receiverId; // Set the destination to the receiver ID
+    console.log("Tor packet before routing:", torPacket);
 
-    // Step 2: Route the packet through the Tor network
-    let routedPacket = torPacket;
-    for (const node of torNodes) {
-      if (node.type !== "exit") {
-        routedPacket.payload = encryptLayer(routedPacket.payload, node.key);
-      } else {
-        routedPacket.payload = decryptLayer(routedPacket.payload, node.key);
-      }
-      routedPacket.layer = node.type;
-    }
+    // Step 2: Route the packet through the Python-based Tor network
+    const routedPacket = await routeTorPacketThroughPython(torPacket);
+    console.log("Routed packet:", routedPacket);
 
     // Step 3: Emit the message to the recipient
     const message = {
@@ -74,6 +74,7 @@ export const sendMessage = async (req, res) => {
 
     res.status(200).json({ success: true, message });
   } catch (error) {
+    console.error("Error in sendMessage controller:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };

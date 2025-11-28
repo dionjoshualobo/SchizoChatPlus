@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { Image, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -7,7 +8,9 @@ const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
-  const { sendMessage } = useChatStore();
+  const authUser = useAuthStore((state) => state.authUser);
+  const selectedUser = useChatStore((state) => state.selectedUser);
+  const sendMessage = useChatStore((state) => state.sendMessage);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -32,7 +35,24 @@ const MessageInput = () => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
 
+    if (!authUser?._id) {
+      toast.error("You must be logged in to send messages");
+      return;
+    }
+
+    if (!selectedUser?._id) {
+      toast.error("Select a conversation before sending messages");
+      return;
+    }
+
     try {
+      console.log("Sending message with payload:", {
+        text: text.trim(),
+        image: imagePreview,
+        senderId: authUser._id,
+        receiverId: selectedUser._id,
+      });
+
       await sendMessage({
         text: text.trim(),
         image: imagePreview,
@@ -98,7 +118,7 @@ const MessageInput = () => {
         <button
           type="submit"
           className="btn btn-sm btn-circle"
-          disabled={!text.trim() && !imagePreview}
+          disabled={!selectedUser || (!text.trim() && !imagePreview)}
         >
           <Send size={22} />
         </button>
