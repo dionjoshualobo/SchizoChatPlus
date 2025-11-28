@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ReactFlow, { Background, Controls } from "reactflow";
 import "reactflow/dist/style.css";
-import axios from "../lib/axios";
+import { axiosInstance } from "../lib/axios";
 
 export default function TorNetworkVisualization() {
   const [nodes, setNodes] = useState([]);
@@ -11,7 +11,7 @@ export default function TorNetworkVisualization() {
     // Fetch data from the backend route
     const fetchVisualizationData = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/tornodes/visualization");
+        const response = await axiosInstance.get("http://localhost:5001/tornodes/visualization");
         const { nodes: backendNodes, edges: backendEdges } = response.data;
 
         // Map backend data to React Flow format
