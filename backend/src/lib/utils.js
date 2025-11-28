@@ -5,13 +5,15 @@ import fetch from "node-fetch";
 
 // Utility function to create a Tor packet
 export function createTorPacket(message, source, destination, layer) {
+  const payload = JSON.stringify(message);
   return {
     id: generateUniqueId(), // Generate a unique ID for the packet
     source,
     destination,
     layer,
     timestamp: new Date().toISOString(),
-    payload: message, // Embed the existing message JSON as the payload
+    payload, // Embed the existing message JSON as the payload
+    size: Buffer.byteLength(payload, "utf-8"), // Calculate the size of the payload in bytes
   };
 }
 

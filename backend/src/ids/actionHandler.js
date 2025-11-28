@@ -1,5 +1,3 @@
-import { logEvent } from './eventLogger.js';
-
 export function determineAction(riskScore, flags = []) {
   let action = 'ALLOW';
 
@@ -36,7 +34,6 @@ export function blockPacket(packet, reason) {
     timestamp: new Date(),
   };
 
-  logEvent(event);
   notifyAdmin(event);
 
   return {
@@ -55,8 +52,6 @@ export function flagPacket(packet, reason) {
     reason,
     timestamp: new Date(),
   };
-
-  logEvent(event);
 
   return {
     status: 'FLAGGED',

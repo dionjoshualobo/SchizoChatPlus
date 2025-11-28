@@ -62,10 +62,12 @@ export const sendMessage = async (req, res) => {
     console.log("Routed packet:", routedPacket);
 
     // Step 3: Store the message in MongoDB with timestamps
+    const parsedPayload = JSON.parse(routedPacket.payload); // Parse the payload JSON string
+
     const messagePayload = {
       senderId,
       receiverId,
-      text: routedPacket.payload.text,
+      text: parsedPayload.text, // Extract text from parsed payload
     };
 
     if (image) {
@@ -74,8 +76,10 @@ export const sendMessage = async (req, res) => {
 
     const createdMessage = await Message.create(messagePayload);
     const responseMessage = createdMessage.toObject();
+    responseMessage.text = parsedPayload.text; // Ensure text is included in the emitted message
 
     // Step 4: Emit the message (with timestamps) to relevant clients
+    console.log("Emitting responseMessage:", responseMessage);
     req.io.emit("newMessage", responseMessage);
 
     res.status(200).json({ success: true, message: responseMessage });

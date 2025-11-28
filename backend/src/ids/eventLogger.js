@@ -1,38 +1,9 @@
-import IDS_Event from '../models/idsEvent.model.js';
-import { getIO } from "../lib/socket.js";
+import { io } from "../lib/socket.js";
 import crypto from "crypto";
-
-// LOG EVENT TO DATABASE
-export async function logEvent(eventData) {
-  try {
-    const event = new IDS_Event({
-      eventId: eventData.eventId || crypto.randomUUID(),
-      timestamp: new Date(),
-      eventType: eventData.type,
-      severity: eventData.severity,
-      relayNode: eventData.relayNode || "unknown",
-      packetId: eventData.packetId,
-      ruleTriggered: eventData.ruleTriggered || [],
-      details: eventData.details || {},
-      resolved: false
-    });
-
-    await event.save();
-
-    // Emit to frontend dashboard
-    emitToFrontend(event);
-
-    console.log("IDS Event Logged:", event.eventType);
-    return event;
-  } catch (err) {
-    console.error("Failed to log IDS event:", err);
-  }
-}
 
 // EMIT LIVE EVENTS TO FRONTEND
 export function emitToFrontend(event) {
   try {
-    const io = getIO();
     io.emit("ids-event", event);
     console.log("IDS Event emitted to dashboard");
   } catch (err) {
@@ -75,7 +46,6 @@ export async function getEventStatistics() {
 }
 
 export default {
-  logEvent,
   emitToFrontend,
   getEventsByTimeRange,
   getEventStatistics
