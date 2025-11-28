@@ -46,7 +46,7 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { senderId, receiverId, text } = req.body;
+    const { senderId, receiverId, text, image } = req.body;
 
     // Debug log to inspect request body
     console.log("Request body:", req.body);
@@ -61,18 +61,24 @@ export const sendMessage = async (req, res) => {
     const routedPacket = await routeTorPacketThroughPython(torPacket);
     console.log("Routed packet:", routedPacket);
 
-    // Step 3: Emit the message to the recipient
-    const message = {
+    // Step 3: Store the message in MongoDB with timestamps
+    const messagePayload = {
       senderId,
       receiverId,
-      text: routedPacket.payload.text, // Decrypted payload
+      text: routedPacket.payload.text,
     };
-    req.io.emit("newMessage", message);
 
-    // Step 4: Store the message in MongoDB
-    await Message.create(message);
+    if (image) {
+      messagePayload.image = image;
+    }
 
-    res.status(200).json({ success: true, message });
+    const createdMessage = await Message.create(messagePayload);
+    const responseMessage = createdMessage.toObject();
+
+    // Step 4: Emit the message (with timestamps) to relevant clients
+    req.io.emit("newMessage", responseMessage);
+
+    res.status(200).json({ success: true, message: responseMessage });
   } catch (error) {
     console.error("Error in sendMessage controller:", error.message);
     res.status(500).json({ success: false, error: error.message });
