@@ -2,6 +2,79 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import axios from "axios";
 import fetch from "node-fetch";
+import fs from "fs";
+import path from "path";
+
+const TOR_CONFIG_PATH = path.resolve(process.cwd(), "tor_sim/tor_nodes_config.json");
+const DEFAULT_TOR_NODES = [
+  { id: 1, type: "entry", port: 9001 },
+  { id: 3, type: "middle", port: 9003 },
+  { id: 6, type: "exit", port: 9006 },
+];
+
+let cachedTorNodes = null;
+
+function loadTorNodesConfig() {
+  if (cachedTorNodes) {
+    return cachedTorNodes;
+  }
+
+  try {
+    const raw = fs.readFileSync(TOR_CONFIG_PATH, "utf-8");
+    const parsed = JSON.parse(raw);
+    cachedTorNodes = parsed.nodes || [];
+  } catch (error) {
+    console.warn("[Tor Router] Unable to read tor_nodes_config.json, falling back to defaults:", error.message);
+    cachedTorNodes = DEFAULT_TOR_NODES;
+  }
+
+  if (!cachedTorNodes.length) {
+    cachedTorNodes = DEFAULT_TOR_NODES;
+  }
+
+  return cachedTorNodes;
+}
+
+function getRandomNodeByType(type, excludedNodeIds = new Set()) {
+  const nodes = loadTorNodesConfig().filter(
+    (node) => node.type === type && !excludedNodeIds.has(node.id)
+  );
+  if (!nodes.length) {
+    throw new Error(`No TOR nodes configured for type: ${type}`);
+  }
+  const randomIndex = Math.floor(Math.random() * nodes.length);
+  return nodes[randomIndex];
+}
+
+async function forwardThroughLayer(packet, type) {
+  const nodesForType = loadTorNodesConfig().filter((node) => node.type === type);
+  if (!nodesForType.length) {
+    throw new Error(`No TOR nodes available for type: ${type}`);
+  }
+
+  const attempted = new Set();
+  let lastError = null;
+
+  while (attempted.size < nodesForType.length) {
+    let node;
+    try {
+      node = getRandomNodeByType(type, attempted);
+    } catch (error) {
+      throw lastError || error;
+    }
+
+    try {
+      const response = await axios.post(`http://localhost:${node.port}/processPacket`, packet);
+      return { packet: response.data, node };
+    } catch (error) {
+      lastError = new Error(`[Tor Router] ${type} node ${node.id} on port ${node.port} failed: ${error.message}`);
+      console.warn(lastError.message);
+      attempted.add(node.id);
+    }
+  }
+
+  throw lastError || new Error(`All ${type} nodes failed to process packet`);
+}
 
 // Updated packet structure to include IDS metadata fields
 export function createTorPacket(message, source, destination, layer) {
@@ -85,19 +158,15 @@ export function generateEncryptionKey() {
 // Function to route a Tor packet through the Python Tor network
 export async function routeTorPacketThroughPython(packet) {
   try {
-    // Send the packet to the entry node
-    const entryNodeResponse = await axios.post("http://localhost:9001/processPacket", packet);
-    const entryNodePacket = entryNodeResponse.data;
+    const entryResult = await forwardThroughLayer(packet, "entry");
+    const middleResult = await forwardThroughLayer(entryResult.packet, "middle");
+    const exitResult = await forwardThroughLayer(middleResult.packet, "exit");
 
-    // Send the packet to the middle node
-    const middleNodeResponse = await axios.post("http://localhost:9003/processPacket", entryNodePacket);
-    const middleNodePacket = middleNodeResponse.data;
+    console.log(
+      `[Tor Router] Selected path: Entry ${entryResult.node.id} (:${entryResult.node.port}) -> Middle ${middleResult.node.id} (:${middleResult.node.port}) -> Exit ${exitResult.node.id} (:${exitResult.node.port})`
+    );
 
-    // Send the packet to the exit node
-    const exitNodeResponse = await axios.post("http://localhost:9006/processPacket", middleNodePacket);
-    const exitNodePacket = exitNodeResponse.data;
-
-    return exitNodePacket; // Final decrypted packet
+    return exitResult.packet; // Final decrypted packet
   } catch (error) {
     console.error("Error routing packet through Python Tor network:", error.message);
     throw new Error("Failed to route packet through Tor network.");
