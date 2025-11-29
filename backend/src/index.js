@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { spawn } from "child_process";
 
 import { connectDB } from "./lib/db.js";
@@ -17,9 +18,19 @@ import { app, server } from "./lib/socket.js";
 
 dotenv.config();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || "0.0.0.0";
 const __dirname = path.resolve();
 const pythonNodeProcesses = [];
+
+const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowAllOrigins =
+  process.env.ALLOW_ALL_ORIGINS === "true" ||
+  process.env.NODE_ENV !== "production" ||
+  allowedOrigins.includes("*");
 
 // Increase payload size limit
 app.use(express.json({ limit: "10mb" })); // Allow payloads up to 10 MB
@@ -28,7 +39,18 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" })); // For URL-encod
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (
+        allowAllOrigins ||
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.includes(getOriginWithoutPort(origin)) ||
+        allowedOrigins.includes(getOriginHostname(origin))
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -54,8 +76,14 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // Start the server
-server.listen(PORT, () => {
-  console.log("Server is running on PORT:" + PORT);
+server.listen(PORT, HOST, () => {
+  const lanAddress = HOST === "0.0.0.0" ? getLocalIPAddress() : HOST;
+  console.log(`Server is running on http://${HOST}:${PORT}`);
+  if (lanAddress) {
+    console.log(`LAN access:   http://${lanAddress}:${PORT}`);
+  } else {
+    console.log("LAN access:   unable to detect local IP (check network interfaces)");
+  }
   connectDB();
   startTorSim(); // Start the Python TOR simulation process
 
@@ -113,6 +141,36 @@ function stopPythonNodes() {
 function handleShutdown() {
   stopTorSim();
   stopPythonNodes();
+}
+
+function getLocalIPAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const ifaceName of Object.keys(interfaces)) {
+    for (const iface of interfaces[ifaceName] || []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return null;
+}
+
+function getOriginWithoutPort(origin) {
+  try {
+    const url = new URL(origin);
+    return `${url.protocol}//${url.hostname}`;
+  } catch (error) {
+    return origin;
+  }
+}
+
+function getOriginHostname(origin) {
+  try {
+    const url = new URL(origin);
+    return url.hostname;
+  } catch (error) {
+    return origin;
+  }
 }
 
 // Gracefully stop the Python TOR simulation process on exit
